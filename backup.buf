@@ -1,0 +1,101 @@
+
+
+
+
+
+
+
+Lemma FV_ctx_comm :
+  forall (t : term) (u v : string) (ctx : context), getFVs (u :: v :: ctx) t = getFVs (v :: u :: ctx) t.
+Proof.
+intro t. induction t.
+- intros u v ctx. simpl.
+  case_eq (eqb s u).
+  + intro eq. case_eq (eqb s v). reflexivity. reflexivity.
+  + intro eq. case_eq (eqb s v). reflexivity. reflexivity.
+- simpl. 
+
+
+Lemma lemma_FV_incl :
+  forall (t:term) (u v:string) (ctx:context),
+  inp u (getFVs ctx t) -> u = v \/ inp u (getFVs (v :: ctx) t).
+Proof.
+intro t.
+induction t.
+- intros u v ctx h. case_eq (eqb u v).
+  + intro eq. apply eqb_eq in eq. left. apply eq.
+  + intro eq. right.
+    simpl. case_eq (eqb s v).
+    * intro eq'. apply eqb_eq in eq'. rewrite <- eq' in eq.
+      simpl in h. case (inb s ctx) in h.
+      contradiction. simpl in h. rewrite eq in h. contradiction.
+    * intro eq'. apply h.
+- intros u v ctx h.
+  case_eq (eqb u v).
+  + intro eq. apply eqb_eq in eq. left. apply eq.
+  + intro eq. right.
+    simpl. simpl in h.
+    apply IHt with (u := u) (v := v) (ctx := (s :: ctx)) in h.
+    case h.
+    * intro eq'. rewrite eq' in eq.
+      rewrite (eqb_refl v) in eq.
+      apply Bool.diff_true_false in eq. contradiction.
+    * 
+
+intros u v t ctx h.
+case_eq (eqb u v).
+- intro eq. apply eqb_eq in eq. left. apply eq.
+- intro eq. right.
+  induction t.
+  + simpl. case_eq (eqb s v).
+    * intro eq'. apply eqb_eq in eq'. rewrite <- eq' in eq.
+      simpl in h. case (inb s ctx) in h.
+      contradiction. simpl in h. rewrite eq in h. contradiction.
+    * intro eq'. apply h.
+  + simpl. simpl in h. apply IHt.
+
+
+Lemma lemma_FV_ctx :
+  forall (v:string) (t:term) (ctx:context), inb v ctx = true -> inb v (getFVs ctx t) = false.
+Proof.
+intros v t ctx h.
+induction t.
+- simpl.
+  case_eq (eqb v s).
+  + intro eq. apply eqb_eq in eq.
+    rewrite <- eq. rewrite h. simpl. reflexivity.
+  + intro eq.
+    case (inb s ctx).
+    * simpl. reflexivity.
+    * simpl. rewrite eq. reflexivity.
+- simpl.
+  case_eq (eqb v s).
+
+
+
+
+case t.
+- intro s. simpl.
+  case_eq (eqb v s).
+  + intro h. apply eqb_eq in h.
+    rewrite h.
+    case (inb s ctx).
+    * simpl. apply Bool.diff_true_false.
+    * simpl. rewrite (eqb_refl s). apply Bool.diff_false_true.
+  + intro h.
+    case (inb s ctx).
+    * simpl.
+
+Lemma FV_is_get_eq : forall (v:string) (t:term), isFV v t = inb v (getFVs [] t).
+Proof.
+intros v t.
+case t.
+- intro s. simpl.
+  case (eqb v s). reflexivity. reflexivity.
+- intros s t'. simpl.
+  case_eq (eqb v s).
+  + intro h.
+    apply (eqb_eq v s) in h.
+    rewrite h.
+    
+  

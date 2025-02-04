@@ -1,2 +1,0 @@
-Inductive test :=
-| Test : test.

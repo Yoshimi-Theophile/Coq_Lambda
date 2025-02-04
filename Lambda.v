@@ -1,3 +1,4 @@
+(*
 Require Import String.
 Require Import List.
 Require Bool.
@@ -116,7 +117,7 @@ Inductive perm : FVcontext -> FVcontext -> Prop :=
 
 (* Linear Terms *)
 
-Inductive linear : FVcontext -> term -> Prop :=
+Inductive linear : FVcontext -> term -> Type :=
 | lin_var x : linear [x] (Var x)
 | lin_abs x t ctx : linear (x :: ctx) t -> linear ctx (Abs x t)
 | lin_app t1 t2 ctx1 ctx2 :
@@ -151,38 +152,71 @@ apply lin_var. apply lin_var.
 apply perm_swap.
 Qed.
 
-(*
-Inductive lterm (ctx : FVcontext) : Type :=
-| LVar x : ctx = [x] -> lterm ctx
-| LAbs x : lterm (x :: ctx) -> lterm ctx
-| LApp ctx1 ctx2 : lterm ctx1 -> lterm ctx2 -> (perm (ctx1 ++ ctx2) ctx) -> lterm ctx.
-
-Lemma List_refl : forall (A : Type) (l1 : list A), l1 = l1. Proof. reflexivity. Qed.
-
-Eval compute in LVar ["x"%string] "x" (List_refl string ["x"%string]).
-*)
+Inductive lterm : Type :=
+| Linear ctx t : linear ctx t -> lterm.
 
 (* Typing *)
 
-Definition context : Type := list (string * stype).
+(* Definition context : Type := list (string * stype). *)
+
+Inductive context : FVcontext -> Type :=
+| envNil : context []
+| envCons x ctx: stype -> context ctx -> context (x :: ctx).
+
+Inductive searchkey (ctx : FVcontext) : Type :=
+| Value x : inp x ctx -> searchkey ctx.
 
 Definition constraints : Type := list (stype * stype).
 
+Lemma empty_search : searchkey [] -> False.
+Proof. intro key. case key. simpl. intros x c. apply c. Qed.
+
+Lemma empty_search' : forall (fvs : FVcontext), (fvs = []) -> searchkey fvs -> False.
+Proof. intros fvs h. rewrite h. apply empty_search. Qed.
+
+Lemma eq_FVcontext : forall fvs : FVcontext, fvs = fvs. Proof. reflexivity. Qed.
+
+Lemma search_not_empty : forall (fvs : FVcontext), searchkey fvs -> fvs <> [].
+Proof. intros fvs key. case key. intros x h. case_eq fvs.
+- intro eq. rewrite eq in h. simpl in h. contradiction.
+- intros s l eq contr. apply eq_sym in contr. apply nil_cons in contr. contradiction.
+Qed.
+
+
 (*
-Inductive lterm (ctx : context) : Type :=
-| LVar x s : ctx = [(x, s)] -> lterm ctx
-| LAbs x s : lterm ((x, s) :: ctx) -> lterm ctx
-| LApp ctx1 ctx2 : lterm ctx1 -> lterm ctx2 -> (perm (ctx1 ++ ctx2) ctx) -> lterm ctx.
+Fixpoint getType {fvs : FVcontext} (ctx : context fvs) (key : searchkey fvs) : stype :=
+match fvs return (fvs <> []) -> stype with
+| [] => fun lemma => match lemma eq_refl with end
+| x :: fvs' => fun lemma =>
+  match key with
+  | Value y inprop =>
+    if (eqb x y) then 
+    else 
+  end
+end (search_not_empty fvs key).
+*)
+
+
+(*
+Fixpoint getType {fvs : FVcontext} (ctx : context fvs) (key : searchkey fvs) : stype :=
+match fvs as fvs' return (fvs = fvs') -> (searchkey fvs -> False) -> stype with
+| [] => fun (e : fvs = []) lemma => match lemma key with end
+| _ => fun _ _ => TVar "temp"
+end (empty_search' fvs eq_refl).
 *)
 
 (*
-Fixpoint constraint_typing (ctx : FVcontext) (lt : lterm ctx) : (stype * constraints) :=
+Fixpoint constraint_typing (env : context) (lt : lterm) : (stype * constraints) :=
 match lt with
-| LVar x eq => 
+| Linear _ _ lin =>
+  match lin with
+  | lin_var x => (TVar "placeholder", [])
+  | lin_abs x t ctx lin' =>
+  end
+end.
 *)
 
-
-
+*)
 
 
 

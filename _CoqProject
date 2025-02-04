@@ -1,2 +1,7 @@
 -R . Project
+Aux.v
+Snoclist.v
+Types.v
 Lambda.v
+PlanarLambda.v
+Workbench.v

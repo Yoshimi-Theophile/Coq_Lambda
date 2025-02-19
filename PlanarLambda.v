@@ -1,5 +1,7 @@
 
 Require Import String.
+Require Import Bool.
+Require Import Arith.
 
 Require Import Aux.
 
@@ -61,5 +63,51 @@ end.
 
 Eval compute in sofpt (PAbs (PAbs (PApp PVar (PAbs (PApp PVar PVar))))).
 Eval compute in sofpt' (PAbs (PAbs (PApp PVar (PAbs (PApp PVar PVar))))).
+
+(* Reductions *)
+
+Theorem pterm_comm {A : Type} {n m : nat} : pterm (m + n) -> pterm (n + m).
+Proof. rewrite Nat.add_comm. intro h. apply h. Qed.
+
+Fixpoint psubst {a b : nat} (u : pterm a) (pt : pterm (S b)) : pterm (a + b) :=
+match pt in pterm (S b) return (pterm (b + a) -> pterm (a + b)) -> pterm (a + b) with
+| PVar => fun H => H u
+| PAbs pt' => fun _ => PAbs (psubst u pt')
+| PApp pt1 pt2 => fun _ => PApp (psubst u pt1) pt2
+end pterm_comm.
+
+(* pterm (S b) + c *)
+
+
+
+(* Abscount *)
+
+(*
+Inductive reduced : nat -> Prop :=
+| Failure (a : nat) : reduced a
+| Success {a : nat} : pterm a -> reduced a.
+
+Fixpoint reduce {a : nat} (pt : pterm (S a)) : reduced a :=
+match pt with
+| PVar => Failure 0
+| PAbs pt' =>
+  match reduce pt' with
+  | Success pt'' => Success (PAbs pt'')
+  | Failure => Failure
+  end
+| PApp (PAbs pt1) pt2 =>
+  Success (psubst pt2 pt1)
+| PApp pt1 pt2 =>
+  match reduce pt1 with
+  | Success pt1' => Success (PApp pt1' pt2)
+  | Failure =>
+    match reduce pt2 with
+    | Success pt2' => Success (PApp pt1 pt2')
+    | Failure => Failure
+    end
+  end
+end.
+*)
+
 
 

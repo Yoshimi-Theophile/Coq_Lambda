@@ -69,12 +69,14 @@ Eval compute in sofpt' (PAbs (PAbs (PApp PVar (PAbs (PApp PVar PVar))))).
 Theorem pterm_comm {A : Type} {n m : nat} : pterm (m + n) -> pterm (n + m).
 Proof. rewrite Nat.add_comm. intro h. apply h. Qed.
 
+(*
 Fixpoint psubst {a b : nat} (u : pterm a) (pt : pterm (S b)) : pterm (a + b) :=
 match pt in pterm (S b) return (pterm (b + a) -> pterm (a + b)) -> pterm (a + b) with
 | PVar => fun H => H u
 | PAbs pt' => fun _ => PAbs (psubst u pt')
 | PApp pt1 pt2 => fun _ => PApp (psubst u pt1) pt2
 end pterm_comm.
+*)
 
 (* pterm (S b) + c *)
 

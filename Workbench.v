@@ -53,8 +53,55 @@ match sigma with
   subst_ctx sigma' (subst1_ctx rul ctx)
 end.
 
+(*
+Axiom comm_comm : forall {A : Type} {n : nat} (l : snoclist A n),
+  snoclist_comm (l ++ []) = l.
+*)
+
+Axiom comm_nil : forall (A : Type), snoclist_comm [] (A := A) (m := 0) (n := 0) = [].
+
+Axiom comm_cons : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
+  snoclist_comm (l :: a) (m := 0) (n := S n) = snoclist_comm l (m := 0) (n := n) :: a.
+
+(*
+Axiom comm_cons' : forall (A : Type) (m n : nat) (l : snoclist A (m + n)) (a : A),
+  snoclist_comm (l :: a) (m := 0) (n := S m + n) = snoclist_comm l (m := 0) (n := m + n) :: a.
+
+Axiom comm_comm_cons : forall (A : Type) (m n : nat) (l : snoclist A (m + n)) (a : A),
+  snoclist_comm (snoclist_comm l (m := m) (n := n) :: a) (m := 0) (n := S n + m) =
+  snoclist_comm (snoclist_comm l (m := m) (n := n)) (m := 0) (n := n + m) :: a.
+*)
+
+Axiom comm_nilapp : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
+  snoclist_comm ((snoclist_comm ([] ++ l)) :: a) (m := S n) (n := 0) = l :: a.
+
+(*
+Lemma comm_nilapp : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
+  snoclist_comm ((snoclist_comm ([] ++ l)) :: a) (m := S n) (n := 0) = l :: a.
+Proof.
+intros A n l a.
+induction l.
+- rewrite comm_cons' with (l := snoclist_comm ([] ++ [])) (a := a).
+*)
+
 Lemma subst_ctx_app : forall {n m : nat} (rul : s_rule) (ctx1 : context n) (ctx2 : context m),
   subst1_ctx rul (ctx1 ++ ctx2) = subst1_ctx rul ctx1 ++ subst1_ctx rul ctx2.
+Proof.
+intros n m rul ctx1 ctx2.
+induction ctx1.
+- simpl. induction ctx2.
+  + simpl.
+    rewrite comm_nil.
+    simpl. reflexivity.
+  + simpl.
+    rewrite comm_cons.
+    rewrite comm_nilapp.
+    rewrite comm_nilapp.
+    simpl. reflexivity.
+- simpl. induction ctx2.
+  + simpl in IHctx1. simpl.
+    
+
 Admitted.
 
 Lemma subst1_typed : forall {n : nat} (rul : s_rule) (ctx : context n) (pt : pterm n) (ty : type),
@@ -98,6 +145,8 @@ Inductive lterm : nat -> Type :=
 | LSyn {n} : sterm n -> lterm n
 | LChk {n} : cterm n -> lterm n.
 
+(* -- Strip -- *)
+
 Fixpoint strip_syn {n : nat} (t : sterm n) : pterm n :=
 match t with
 | SAbs t' => PAbs (strip_syn t')
@@ -116,15 +165,39 @@ match t with
 | LChk ct => strip_chk ct
 end.
 
-(*
-Inductive is_typed : forall {a : nat}, context a -> pterm a -> type -> Prop :=
-| typed_var ty : is_typed [ty] PVar ty
-| typed_abs {n} ty1 gamma (pt : pterm (S n)) ty2 :
-  is_typed (gamma :: ty1) pt ty2 -> is_typed gamma (PAbs pt) (TImp ty1 ty2)
-| typed_app {n m} gamma delta (pt1 : pterm n) (pt2 : pterm m) ty1 ty2:
-  is_typed gamma pt1 (TImp ty1 ty2) -> is_typed delta pt2 ty1 ->
-  is_typed (gamma ++ delta) (PApp pt1 pt2) ty2.
-*)
+(* -- Label -- *)
+
+Fixpoint label_minus {n : nat} (t : pterm n) : sterm n :=
+match t with
+| PVar => SCir 0 CVar
+| PAbs t' => SAbs (label_minus t')
+| PApp t1 t2 => SCir 0 (CApp (CSqu (label_minus t1)) (label_minus t2))
+end.
+
+Fixpoint label_plus {n : nat} (t : pterm n) : cterm n :=
+match t with
+| PVar => CVar
+| PAbs t' => CSqu (SAbs (SCir 0 (label_plus t')))
+| PApp t1 t2 => CApp (label_plus t1) (SCir 0 (label_plus t2))
+end.
+
+Lemma label_strip_minus : forall {n : nat} (t : pterm n), strip_syn (label_minus t) = t.
+Proof.
+intros n t. induction t.
+- simpl. reflexivity.
+- simpl. rewrite IHt. reflexivity.
+- simpl. rewrite IHt1. rewrite IHt2. reflexivity.
+Qed.
+
+Lemma label_strip_plus : forall {n : nat} (t : pterm n), strip_chk (label_plus t) = t.
+Proof.
+intros n t. induction t.
+- simpl. reflexivity.
+- simpl. rewrite IHt. reflexivity.
+- simpl. rewrite IHt1. rewrite IHt2. reflexivity.
+Qed.
+
+
 
 Definition type_eq : Type := type * type.
 Definition constraints : Type := list type_eq.

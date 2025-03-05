@@ -106,7 +106,8 @@ induction ctx1.
     simpl. rewrite IHctx1.
     reflexivity.
   + simpl in IHctx1.
-    simpl in IHctx2.
+    rewrite ? comm_consapp in IHctx1.
+    
     simpl.
     rewrite ? comm_consapp.
 

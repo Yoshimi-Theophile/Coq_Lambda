@@ -73,7 +73,11 @@ Axiom comm_comm_cons : forall (A : Type) (m n : nat) (l : snoclist A (m + n)) (a
 *)
 
 Axiom comm_nilapp : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
-  snoclist_comm ((snoclist_comm ([] ++ l)) :: a) (m := S n) (n := 0) = l :: a.
+  snoclist_comm (snoclist_comm ([] ++ l) :: a) (m := S n) (n := 0) = l :: a.
+
+Axiom comm_consapp : forall (A : Type) (m n : nat) (l : snoclist A m) (r : snoclist A n) (a : A),
+  snoclist_comm (snoclist_comm (l ++ r) (m := m) (n := n) :: a) (m := S n) (n := m) =
+  l ++ r :: a.
 
 (*
 Lemma comm_nilapp : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
@@ -94,12 +98,19 @@ induction ctx1.
     rewrite comm_nil.
     simpl. reflexivity.
   + simpl.
-    rewrite comm_cons.
-    rewrite comm_nilapp.
-    rewrite comm_nilapp.
+    rewrite ? comm_nilapp.
     simpl. reflexivity.
 - simpl. induction ctx2.
   + simpl in IHctx1. simpl.
+    rewrite ? comm_cons.
+    simpl. rewrite IHctx1.
+    reflexivity.
+  + simpl in IHctx1.
+    simpl in IHctx2.
+    simpl.
+    rewrite ? comm_consapp.
+
+    
     
 
 Admitted.

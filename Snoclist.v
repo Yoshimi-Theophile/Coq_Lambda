@@ -23,13 +23,13 @@ Notation "[ x ; y ; .. ; z ]" := (snoc (snoc .. (snoc nil x) .. y) z)
   (format "[ '[' x ; '/' y ; '/' .. ; '/' z ']' ]"): snoclist_scope.
 *)
 End SnoclistNotations.
-
 Import SnoclistNotations.
-
-(*Definition length {A : Type} {n : nat} : snoclist A n -> nat := fix length l := n.*)
 
 Theorem snoclist_comm {A : Type} {n m : nat} : snoclist A (m + n) -> snoclist A (n + m).
 Proof. rewrite Nat.add_comm. intro h. apply h. Qed.
+
+Theorem snoclist_asso_1 {A : Type} {n m : nat} : snoclist A (S m + n) -> snoclist A (m + S n).
+Proof. rewrite Nat.add_succ_comm. intro h. apply h. Qed.
 
 Fixpoint app {A : Type} {n m : nat} (l : snoclist A n) (r : snoclist A m) : snoclist A (n + m) :=
 match r in (snoclist _ m) return (snoclist _ (m + n) -> snoclist _ (n + m)) -> snoclist _ (n + m) with
@@ -41,13 +41,49 @@ Infix "++" := app (right associativity, at level 60) : snoclist_scope.
 
 Section Facts.
 
-Variable A : Type.
+Axiom comm_nil : forall (A : Type), snoclist_comm [] (A := A) (m := 0) (n := 0) = [].
 
-(*
-Theorem nil_snoc (x:A) (l:snoclist A) : [] <> l :: x.
-Proof.
-discriminate.
-Qed.
-*)
+Axiom comm_appnil : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
+  snoclist_comm (l :: a) (m := 0) (n := S n) = snoclist_comm l (m := 0) (n := n) :: a.
+
+Axiom comm_nilapp : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
+  snoclist_comm (snoclist_comm ([] ++ l) :: a) (m := S n) (n := 0) = l :: a.
+
+Axiom comm_consapp_asso : forall (A : Type) (m n : nat) (l : snoclist A m) (r : snoclist A n) (a : A),
+  snoclist_comm (snoclist_comm (l ++ r) (m := m) (n := n) :: a) (m := S n) (n := m) =
+  snoclist_asso_1 ((l ++ r) :: a).
+
+Axiom comm_consapp_asso' : forall (A : Type) (m n : nat) (l : snoclist A m) (r : snoclist A n) (a b : A),
+  snoclist_comm (snoclist_comm ((l :: a) ++ r) (m := S m) (n := n) :: b) (m := S n) (n := S m) =
+  snoclist_asso_1 ((l :: a) ++ r) :: b.
+
+Axiom asso_eq : forall {A : Type} {m n : nat} (l1 l2 : snoclist A (S m + n)),
+  snoclist_asso_1 l1 (m := m) (n := n) = snoclist_asso_1 l2 (m := m) (n := n) -> l1 = l2.
+
+Axiom P_asso : forall {A : Type} (m n : nat) (l : snoclist A (S m + n))
+  (P : forall {n : nat}, snoclist A n -> snoclist A n),
+  P (snoclist_asso_1 l) = snoclist_asso_1 (P l).
+
+Axiom P_comm : forall {A : Type} (m n : nat) (l : snoclist A (m + n))
+  (P : forall {n : nat}, snoclist A n -> snoclist A n),
+  P (snoclist_comm l) = snoclist_comm (P l).
 
 End Facts.
+
+(* Lemmas *)
+
+Require Import Coq.Logic.Eqdep_dec.
+Require Import Coq.Arith.Peano_dec.
+
+Lemma snoc_eq : forall {A : Type} {n : nat} (l1 l2 : snoclist A n) (a : A),
+  l1 :: a = l2 :: a -> l1 = l2.
+Proof.
+intros A n l1 l2 a eq.
+inversion eq.
+apply inj_pair2_eq_dec in H0.
+- apply H0.
+- apply eq_nat_dec.
+Qed.
+
+
+

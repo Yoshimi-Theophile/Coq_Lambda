@@ -1,7 +1,9 @@
 -R . Project
 Aux.v
 Snoclist.v
-Types.v
-Lambda.v
 PlanarLambda.v
+LabeledLambda.v
+Types.v
+Subst.v
+Bidir.v
 Workbench.v

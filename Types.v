@@ -2,6 +2,9 @@
 Require Import String.
 
 Require Import Aux.
+Require Import Snoclist.
+Import SnoclistNotations.
+Require Import PlanarLambda.
 
 Inductive type : Type :=
 | TVar : nat -> type
@@ -18,3 +21,15 @@ match ty with
   | _ => "(" ++ softy ty1 ++ ") -> " ++ softy ty2
   end
 end.
+
+(* Typing *)
+
+Definition context n : Type := snoclist type n.
+
+Inductive is_typed : forall {a : nat}, context a -> pterm a -> type -> Prop :=
+| typed_var ty : is_typed [ty] PVar ty
+| typed_abs {n} ty1 gamma (pt : pterm (S n)) ty2 :
+  is_typed (gamma :: ty1) pt ty2 -> is_typed gamma (PAbs pt) (TImp ty1 ty2)
+| typed_app {n m} gamma delta (pt1 : pterm n) (pt2 : pterm m) ty1 ty2:
+  is_typed gamma pt1 (TImp ty1 ty2) -> is_typed delta pt2 ty1 ->
+  is_typed (gamma ++ delta) (PApp pt1 pt2) ty2.

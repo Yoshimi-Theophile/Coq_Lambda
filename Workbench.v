@@ -53,11 +53,6 @@ match sigma with
   subst_ctx sigma' (subst1_ctx rul ctx)
 end.
 
-(*
-Axiom comm_comm : forall {A : Type} {n : nat} (l : snoclist A n),
-  snoclist_comm (l ++ []) = l.
-*)
-
 Axiom comm_nil : forall (A : Type), snoclist_comm [] (A := A) (m := 0) (n := 0) = [].
 
 Axiom comm_appnil : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
@@ -65,20 +60,6 @@ Axiom comm_appnil : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
 
 Axiom comm_nilapp : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
   snoclist_comm (snoclist_comm ([] ++ l) :: a) (m := S n) (n := 0) = l :: a.
-
-(*
-Axiom comm_consapp : forall (A : Type) (m n : nat) (l : snoclist A m) (r : snoclist A n) (a : A),
-  snoclist_comm (snoclist_comm (l ++ r) (m := m) (n := n) :: a) (m := S n) (n := m) =
-  l ++ (r :: a).
-
-Axiom comm_consapp' : forall (A : Type) (m n : nat) (l : snoclist A m) (r : snoclist A n) (a b : A),
-  snoclist_comm (snoclist_comm ((l :: a) ++ r) (m := S m) (n := n) :: b) (m := S n) (n := S m) =
-  (l :: a) ++ (r :: b).
-
-Axiom comm_consapp'' : forall (A : Type) (m n : nat) (l : snoclist A m) (r : snoclist A n) (a b : A),
-  snoclist_comm (snoclist_comm ((l :: a) ++ r) (m := S m) (n := n) :: b) (m := S n) (n := S m) =
-  (l ++ ([a] ++ r)) :: b.
-*)
 
 Theorem snoclist_asso_1 {A : Type} {n m : nat} : snoclist A (S m + n) -> snoclist A (m + S n).
 Proof. rewrite Nat.add_succ_comm. intro h. apply h. Qed.
@@ -91,17 +72,25 @@ Axiom comm_consapp_asso' : forall (A : Type) (m n : nat) (l : snoclist A m) (r :
   snoclist_comm (snoclist_comm ((l :: a) ++ r) (m := S m) (n := n) :: b) (m := S n) (n := S m) =
   snoclist_asso_1 ((l :: a) ++ r) :: b.
 
+Axiom P_asso : forall {A : Type} (m n : nat) (l : snoclist A (S m + n))
+  (P : forall {n : nat}, snoclist A n -> snoclist A n),
+  P (snoclist_asso_1 l) = snoclist_asso_1 (P l).
+
+Axiom P_comm : forall {A : Type} (m n : nat) (l : snoclist A (m + n))
+  (P : forall {n : nat}, snoclist A n -> snoclist A n),
+  P (snoclist_comm l) = snoclist_comm (P l).
+
 Lemma subst_asso : forall {m n : nat} (rul : s_rule) (ctx : context (S m + n)),
   subst1_ctx rul (snoclist_asso_1 ctx) = 
   snoclist_asso_1 (subst1_ctx rul ctx).
-Admitted.
+Proof. intros m n rul ctx. Admitted.
+(* apply P_asso with (m := m) (n := n) (l := ctx) (P := subst1_ctx rul). *)
+
+Axiom asso_eq : forall {m n : nat} (ctx1 ctx2 : context (S m + n)),
+  snoclist_asso_1 ctx1 = snoclist_asso_1 ctx2 -> ctx1 = ctx2.
 
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Arith.Peano_dec.
-
-Lemma asso_eq : forall {m n : nat} (ctx1 ctx2 : context (S m + n)),
-  snoclist_asso_1 ctx1 = snoclist_asso_1 ctx2 -> ctx1 = ctx2.
-Admitted.
 
 Lemma snoc_eq : forall {A : Type} {n : nat} (l1 l2 : snoclist A n) (a : A),
   l1 :: a = l2 :: a -> l1 = l2.
@@ -257,8 +246,6 @@ intros n t. induction t.
 - simpl. rewrite IHt1. rewrite IHt2. reflexivity.
 Qed.
 
-
-
 Definition type_eq : Type := type * type.
 Definition constraints : Type := list type_eq.
 
@@ -287,6 +274,10 @@ Inductive is_bidir : forall {a : nat}, context a -> lterm a -> type -> constrain
 | Cbidir {n} gamma (ct : cterm n) ty const :
   is_bidir_chk gamma ct ty const ->
   is_bidir gamma (LChk ct) ty const.
+
+Inductive sat_const : s_rules -> constraints -> Prop :=
+| Unif_empty : sat_const List.nil List.nil.
+
 
 (*
 Lemma typed_lp : forall {a : nat} (ctx : context a) (lt : lterm a) (ty : type) (const : constraints),

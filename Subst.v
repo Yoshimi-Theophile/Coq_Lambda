@@ -48,7 +48,7 @@ Lemma subst_asso : forall {m n : nat} (rul : s_rule) (ctx : context (S m + n)),
   snoclist_asso_1 (subst1_ctx rul ctx).
 Proof. intros m n rul ctx. apply P_asso. Qed.
 
-Lemma subst_ctx_app : forall {n m : nat} (rul : s_rule) (ctx1 : context n) (ctx2 : context m),
+Lemma app_subst1_ctx : forall {n m : nat} (rul : s_rule) (ctx1 : context n) (ctx2 : context m),
   subst1_ctx rul (ctx1 ++ ctx2) = subst1_ctx rul ctx1 ++ subst1_ctx rul ctx2.
 Proof.
 intros n m rul ctx1 ctx2.
@@ -128,7 +128,7 @@ Proof.
 intros m n sigma. induction sigma.
 - simpl. reflexivity.
 - simpl. intros ctx1 ctx2.
-  rewrite subst_ctx_app.
+  rewrite app_subst1_ctx.
   apply IHsigma.
 Qed.
 
@@ -142,7 +142,7 @@ intros rul ctx pt ty h.
 induction h.
 - simpl. apply typed_var.
 - simpl. apply typed_abs. simpl in IHh. apply IHh.
-- rewrite subst_ctx_app.
+- rewrite app_subst1_ctx.
   apply typed_app with (ty1 := subst1_ty rul ty1).
   simpl in IHh1. apply IHh1. apply IHh2.
 Qed.

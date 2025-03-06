@@ -60,32 +60,63 @@ Axiom comm_comm : forall {A : Type} {n : nat} (l : snoclist A n),
 
 Axiom comm_nil : forall (A : Type), snoclist_comm [] (A := A) (m := 0) (n := 0) = [].
 
-Axiom comm_cons : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
+Axiom comm_appnil : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
   snoclist_comm (l :: a) (m := 0) (n := S n) = snoclist_comm l (m := 0) (n := n) :: a.
-
-(*
-Axiom comm_cons' : forall (A : Type) (m n : nat) (l : snoclist A (m + n)) (a : A),
-  snoclist_comm (l :: a) (m := 0) (n := S m + n) = snoclist_comm l (m := 0) (n := m + n) :: a.
-
-Axiom comm_comm_cons : forall (A : Type) (m n : nat) (l : snoclist A (m + n)) (a : A),
-  snoclist_comm (snoclist_comm l (m := m) (n := n) :: a) (m := 0) (n := S n + m) =
-  snoclist_comm (snoclist_comm l (m := m) (n := n)) (m := 0) (n := n + m) :: a.
-*)
 
 Axiom comm_nilapp : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
   snoclist_comm (snoclist_comm ([] ++ l) :: a) (m := S n) (n := 0) = l :: a.
 
+(*
 Axiom comm_consapp : forall (A : Type) (m n : nat) (l : snoclist A m) (r : snoclist A n) (a : A),
   snoclist_comm (snoclist_comm (l ++ r) (m := m) (n := n) :: a) (m := S n) (n := m) =
-  l ++ r :: a.
+  l ++ (r :: a).
+
+Axiom comm_consapp' : forall (A : Type) (m n : nat) (l : snoclist A m) (r : snoclist A n) (a b : A),
+  snoclist_comm (snoclist_comm ((l :: a) ++ r) (m := S m) (n := n) :: b) (m := S n) (n := S m) =
+  (l :: a) ++ (r :: b).
+
+Axiom comm_consapp'' : forall (A : Type) (m n : nat) (l : snoclist A m) (r : snoclist A n) (a b : A),
+  snoclist_comm (snoclist_comm ((l :: a) ++ r) (m := S m) (n := n) :: b) (m := S n) (n := S m) =
+  (l ++ ([a] ++ r)) :: b.
+*)
+
+Theorem snoclist_asso_1 {A : Type} {n m : nat} : snoclist A (S m + n) -> snoclist A (m + S n).
+Proof. rewrite Nat.add_succ_comm. intro h. apply h. Qed.
+
+Axiom comm_consapp_asso : forall (A : Type) (m n : nat) (l : snoclist A m) (r : snoclist A n) (a : A),
+  snoclist_comm (snoclist_comm (l ++ r) (m := m) (n := n) :: a) (m := S n) (n := m) =
+  snoclist_asso_1 ((l ++ r) :: a).
+
+Axiom comm_consapp_asso' : forall (A : Type) (m n : nat) (l : snoclist A m) (r : snoclist A n) (a b : A),
+  snoclist_comm (snoclist_comm ((l :: a) ++ r) (m := S m) (n := n) :: b) (m := S n) (n := S m) =
+  snoclist_asso_1 ((l :: a) ++ r) :: b.
+
+Lemma subst_asso : forall {m n : nat} (rul : s_rule) (ctx : context (S m + n)),
+  subst1_ctx rul (snoclist_asso_1 ctx) = 
+  snoclist_asso_1 (subst1_ctx rul ctx).
+Admitted.
+
+Require Import Coq.Logic.Eqdep_dec.
+Require Import Coq.Arith.Peano_dec.
+
+Lemma asso_eq : forall {m n : nat} (ctx1 ctx2 : context (S m + n)),
+  snoclist_asso_1 ctx1 = snoclist_asso_1 ctx2 -> ctx1 = ctx2.
+Admitted.
+
+Lemma snoc_eq : forall {A : Type} {n : nat} (l1 l2 : snoclist A n) (a : A),
+  l1 :: a = l2 :: a -> l1 = l2.
+Proof.
+intros A n l1 l2 a eq.
+inversion eq.
+apply inj_pair2_eq_dec in H0.
+- apply H0.
+- apply eq_nat_dec.
+Qed.
 
 (*
-Lemma comm_nilapp : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
-  snoclist_comm ((snoclist_comm ([] ++ l)) :: a) (m := S n) (n := 0) = l :: a.
-Proof.
-intros A n l a.
-induction l.
-- rewrite comm_cons' with (l := snoclist_comm ([] ++ [])) (a := a).
+Lemma snoclist_cong : forall {A : Type} {n m' : nat} (l : snoclist A n) (a : A)
+  (P Q : forall {m : nat}, snoclist A m -> snoclist A m'),
+  P l = Q l -> P (l :: a) = Q (l :: a).
 *)
 
 Lemma subst_ctx_app : forall {n m : nat} (rul : s_rule) (ctx1 : context n) (ctx2 : context m),
@@ -102,19 +133,36 @@ induction ctx1.
     simpl. reflexivity.
 - simpl. induction ctx2.
   + simpl in IHctx1. simpl.
-    rewrite ? comm_cons.
+    rewrite ? comm_appnil.
     simpl. rewrite IHctx1.
     reflexivity.
-  + simpl in IHctx1.
-    rewrite ? comm_consapp in IHctx1.
-    
+  + simpl.
+    rewrite ? comm_consapp_asso'.
+    simpl in IHctx1.
+    rewrite ? comm_consapp_asso in IHctx1.
+    assert (
+      subst1_ctx rul (snoclist_asso_1 ((ctx1 ++ ctx2) :: a0)) = 
+      snoclist_asso_1 (subst1_ctx rul ((ctx1 ++ ctx2) :: a0))
+    ) by apply subst_asso.
+    rewrite H in IHctx1. simpl in IHctx1.
+    assert (
+      subst1_ctx rul (ctx1 ++ ctx2) =
+      subst1_ctx rul ctx1 ++ subst1_ctx rul ctx2
+    ).
+    apply snoc_eq with (a := subst1_ty rul a0).
+    apply asso_eq. apply IHctx1.
     simpl.
-    rewrite ? comm_consapp.
-
-    
-    
-
-Admitted.
+    assert (
+      subst1_ctx rul (snoclist_asso_1 ((ctx1 :: a) ++ ctx2)) = 
+      snoclist_asso_1 (subst1_ctx rul ((ctx1 :: a) ++ ctx2))
+    ) by apply subst_asso.
+    rewrite H1.
+    assert (
+      subst1_ctx rul ((ctx1 :: a) ++ ctx2) =
+      (subst1_ctx rul ctx1 :: subst1_ty rul a) ++ subst1_ctx rul ctx2
+    ) by (apply IHctx2; apply H0).
+    rewrite H2. reflexivity.
+Qed.
 
 Lemma subst1_typed : forall {n : nat} (rul : s_rule) (ctx : context n) (pt : pterm n) (ty : type),
   is_typed ctx pt ty -> is_typed (subst1_ctx rul ctx) pt (subst1_ty rul ty).

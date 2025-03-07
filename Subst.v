@@ -52,6 +52,14 @@ Lemma app_subst1_ctx : forall {n m : nat} (rul : s_rule) (ctx1 : context n) (ctx
   subst1_ctx rul (ctx1 ++ ctx2) = subst1_ctx rul ctx1 ++ subst1_ctx rul ctx2.
 Proof.
 intros n m rul ctx1 ctx2.
+(*
+induction ctx2.
+- simpl.
+  rewrite P_comm. reflexivity.
+- simpl.
+  rewrite comm_consapp_asso.
+*)
+
 induction ctx1.
 - simpl. induction ctx2.
   + simpl.

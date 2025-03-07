@@ -31,6 +31,17 @@ Proof. rewrite Nat.add_comm. intro h. apply h. Qed.
 Theorem snoclist_asso_1 {A : Type} {n m : nat} : snoclist A (S m + n) -> snoclist A (m + S n).
 Proof. rewrite Nat.add_succ_comm. intro h. apply h. Qed.
 
+(*
+Theorem snoclist_nil {A : Type} {m : nat} : snoclist A (m + 0) -> snoclist A m.
+Proof. rewrite Nat.add_comm. intro h. apply h. Qed.
+
+Fixpoint app {A : Type} {n m : nat} (l : snoclist A n) (r : snoclist A m) : snoclist A (n + m) :=
+match r in (snoclist _ m) return (snoclist _ (m + n) -> snoclist _ (n + m)) -> snoclist _ (n + m) with
+| nil => fun H => H l
+| r' :: a => fun _ => (app l r') :: a
+end snoclist_nil.
+*)
+
 Fixpoint app {A : Type} {n m : nat} (l : snoclist A n) (r : snoclist A m) : snoclist A (n + m) :=
 match r in (snoclist _ m) return (snoclist _ (m + n) -> snoclist _ (n + m)) -> snoclist _ (n + m) with
 | nil => fun H => H l
@@ -41,7 +52,19 @@ Infix "++" := app (right associativity, at level 60) : snoclist_scope.
 
 Section Facts.
 
-Axiom comm_nil : forall (A : Type), snoclist_comm [] (A := A) (m := 0) (n := 0) = [].
+Require Import Coq.Program.Equality.
+
+Lemma zero_len : forall (A : Type) (l : snoclist A 0), l = [].
+Proof.
+intros A l.
+dependent destruction l. reflexivity.
+Qed.
+
+Lemma comm_nil : forall (A : Type), snoclist_comm [] (A := A) (m := 0) (n := 0) = [].
+Proof.
+intro A. rewrite zero_len with (l := snoclist_comm [] (m := 0) (n := 0)).
+reflexivity.
+Qed.
 
 Axiom comm_appnil : forall (A : Type) (n : nat) (l : snoclist A n) (a : A),
   snoclist_comm (l :: a) (m := 0) (n := S n) = snoclist_comm l (m := 0) (n := n) :: a.
@@ -85,5 +108,11 @@ apply inj_pair2_eq_dec in H0.
 - apply eq_nat_dec.
 Qed.
 
+(*
+Redefine app
+Prove some of those axioms maybe
+Redefine sat_xi (subst ty1 = subst ty2)
+x = y -> P x -> P y?
+*)
 
 

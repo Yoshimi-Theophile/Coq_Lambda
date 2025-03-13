@@ -46,59 +46,21 @@ end.
 Lemma subst_asso : forall {m n : nat} (rul : s_rule) (ctx : context (S m + n)),
   subst1_ctx rul (snoclist_asso_1 ctx) = 
   snoclist_asso_1 (subst1_ctx rul ctx).
-Proof. intros m n rul ctx. apply P_asso. Qed.
+Proof. intros m n rul ctx.
+rewrite map_asso with (f := subst1_ty rul); reflexivity.
+Qed.
 
 Lemma app_subst1_ctx : forall {n m : nat} (rul : s_rule) (ctx1 : context n) (ctx2 : context m),
   subst1_ctx rul (ctx1 ++ ctx2) = subst1_ctx rul ctx1 ++ subst1_ctx rul ctx2.
 Proof.
 intros n m rul ctx1 ctx2.
-(*
 induction ctx2.
 - simpl.
-  rewrite P_comm. reflexivity.
+  rewrite map_npz with (f := subst1_ty rul); reflexivity.
 - simpl.
-  rewrite comm_consapp_asso.
-*)
-
-induction ctx1.
-- simpl. induction ctx2.
-  + simpl.
-    rewrite comm_nil.
-    simpl. reflexivity.
-  + simpl.
-    rewrite ? comm_nilapp.
-    simpl. reflexivity.
-- simpl. induction ctx2.
-  + simpl in IHctx1. simpl.
-    rewrite ? comm_appnil.
-    simpl. rewrite IHctx1.
-    reflexivity.
-  + simpl.
-    rewrite ? comm_consapp_asso'.
-    simpl in IHctx1.
-    rewrite ? comm_consapp_asso in IHctx1.
-    assert (
-      subst1_ctx rul (snoclist_asso_1 ((ctx1 ++ ctx2) :: a0)) = 
-      snoclist_asso_1 (subst1_ctx rul ((ctx1 ++ ctx2) :: a0))
-    ) by apply subst_asso.
-    rewrite H in IHctx1. simpl in IHctx1.
-    assert (
-      subst1_ctx rul (ctx1 ++ ctx2) =
-      subst1_ctx rul ctx1 ++ subst1_ctx rul ctx2
-    ).
-    apply snoc_eq with (a := subst1_ty rul a0).
-    apply asso_eq. apply IHctx1.
-    simpl.
-    assert (
-      subst1_ctx rul (snoclist_asso_1 ((ctx1 :: a) ++ ctx2)) = 
-      snoclist_asso_1 (subst1_ctx rul ((ctx1 :: a) ++ ctx2))
-    ) by apply subst_asso.
-    rewrite H1.
-    assert (
-      subst1_ctx rul ((ctx1 :: a) ++ ctx2) =
-      (subst1_ctx rul ctx1 :: subst1_ty rul a) ++ subst1_ctx rul ctx2
-    ) by (apply IHctx2; apply H0).
-    rewrite H2. reflexivity.
+  rewrite map_asso with (f := subst1_ty rul).
+  + simpl. rewrite IHctx2. reflexivity.
+  + reflexivity.
 Qed.
 
 Lemma dist_subst1_ty : forall (rul : s_rule) (ty1 ty2 : type),

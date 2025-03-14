@@ -303,6 +303,47 @@ Inductive is_inter : forall {a : nat}, context a -> lterm a -> type -> Prop :=
   is_inter_chk gamma ct ty List.nil ->
   is_inter gamma (LChk ct) ty.
 
+Theorem inter_typed_syn :
+  forall {n : nat} (gamma : context n) (st : sterm n) (ty : type),
+  is_inter_syn gamma st ty ->
+  is_typed gamma (strip_syn st) ty
+
+with inter_typed_chk :
+  forall {n : nat} (gamma : context n) (ct : cterm n) (ty : type) (sigma : s_rules),
+  is_inter_chk gamma ct ty sigma ->
+  is_typed (subst_ctx sigma gamma) (strip_chk ct) (subst_ty sigma ty).
+
+Proof.
+- intros n gamma st ty h.
+  induction h.
+  + simpl.
+    apply typed_abs.
+    apply IHh.
+  + simpl.
+    apply inter_typed_chk.
+    apply H.
+- intros n gamma st ty sigma h.
+  induction h.
+  + simpl. apply typed_var.
+  + simpl.
+    rewrite app_subst_ctx.
+    apply typed_app with (ty1 := subst_ty sigma ty1).
+    * rewrite <- dist_subst_ty.
+      apply IHh.
+    * apply subst_typed.
+      apply inter_typed_syn.
+      apply H.
+  + simpl.
+    dependent destruction H0.
+    rewrite <- H1.
+    apply subst_typed.
+    apply inter_typed_syn.
+    apply H.
+Qed.
+
+
+
+
 (*
 Lemma inter_chk_sigma :
   forall {n : nat} (gamma : context n) (ct : cterm n) (a : nat) (sigma : s_rules),
@@ -329,21 +370,6 @@ Definition is_princ : Type := forall {n : nat} (ctx : context n) (pt : pterm n) 
 *)
 
 
-Definition inter_typed_syn : Type :=
-  forall {n : nat} (gamma : context n) (st : sterm n) (ty : type),
-  is_inter_syn gamma st ty ->
-  sig (
-    fun (const : constraints) =>
-    is_bidir_syn gamma st ty const
-  ).
-
-Definition inter_typed_chk : Type :=
-  forall {n : nat} (gamma : context n) (ct : cterm n) (ty : type) (sigma : s_rules),
-  is_inter_chk gamma ct ty sigma ->
-  sig (
-    fun (const : constraints) =>
-    is_bidir_chk gamma ct ty const
-  ).
 
 
 

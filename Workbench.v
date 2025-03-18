@@ -241,6 +241,8 @@ induction H.
   reflexivity.
 Qed.
 
+Check ex.
+
 (*
 Lemma build_sat : forall (sigma : s_rules) (const : constraints),
   build_subst sigma const ->
@@ -264,17 +266,23 @@ induction h.
 
 
 
-(* Principal Typing *)
-
-Definition is_princ : Type := forall {n : nat} (ctx : context n) (pt : pterm n) (ty : type),
-  is_typed ctx pt ty -> forall (ctx' : context n) (ty' : type), is_typed ctx' pt ty' ->
-  sig (fun (sigma : s_rules) => ctx' = subst_ctx sigma ctx /\ ty' = subst_ty sigma ty).
-
-
-
+Inductive subst_dom : s_rules -> s_rules -> constraints -> Prop :=
+| dom_nil sigma1 sigma2 : subst_dom sigma1 sigma2 List.nil
+| dom_cons sigma1 sigma2 ty1 ty2 const :
+  subst_dom sigma1 sigma2 const ->
+  subst_ty sigma1 (subst_ty sigma2 ty1) = subst_ty sigma1 ty1 ->
+  subst_ty sigma1 (subst_ty sigma2 ty2) = subst_ty sigma1 ty2 ->
+  subst_dom sigma1 sigma2 ((ty1, ty2) :: const)%list.
 
 (* ================== *)
 
+Inductive is_primitive : s_rules -> Prop :=
+| prim (sigma : s_rules) (const : constraints) :
+  sat_xi sigma const ->
+  (forall (sigma' : s_rules),
+   sat_xi sigma' const ->
+   subst_dom sigma' sigma const) ->
+  is_primitive sigma.
 
 Inductive is_inter_syn : forall {a : nat}, context a -> sterm a -> type -> Prop :=
 | inter_abs {n} ty1 gamma (st : sterm (S n)) ty2 :
@@ -341,35 +349,17 @@ Proof.
     apply H.
 Qed.
 
-
-
+(* Principal Typing *)
 
 (*
-Lemma inter_chk_sigma :
-  forall {n : nat} (gamma : context n) (ct : cterm n) (a : nat) (sigma : s_rules),
-  is_inter_chk gamma ct (TVar a) sigma ->
-  is_inter_chk (subst_ctx sigma gamma) ct (subst_ty sigma (TVar a)) Datatypes.nil.
-Proof.
-intros n gamma ct a sigma h.
-induction h.
-- simpl. apply inter_var.
-- rewrite app_subst_ctx.
-  apply inter_app with (ty1 := subst_ty sigma ty1).
-  + rewrite <- dist_subst_ty.
-    apply IHh.
-  + 
-
+Inductive is_comp_sigma : s_rules -> s_rules -> Prop :=
+| comp_nil sigma : is_comp_sigma sigma List.nil
+| comp_id sigma : is_comp_sigma sigma sigma
+| comp_cons sigma :
 *)
 
-(*
-
-Definition is_princ : Type := forall {n : nat} (ctx : context n) (pt : pterm n) (ty : type),
+Definition is_princ := forall {n : nat} (ctx : context n) (pt : pterm n) (ty : type),
   is_typed ctx pt ty -> forall (ctx' : context n) (ty' : type), is_typed ctx' pt ty' ->
   sig (fun (sigma : s_rules) => ctx' = subst_ctx sigma ctx /\ ty' = subst_ty sigma ty).
-
-*)
-
-
-
 
 

@@ -61,13 +61,14 @@ match pt with
   end
 end.
 
-Eval compute in sofpt (PAbs (PAbs (PApp PVar (PAbs (PApp PVar PVar))))).
-Eval compute in sofpt' (PAbs (PAbs (PApp PVar (PAbs (PApp PVar PVar))))).
+(* Eval compute in sofpt (PAbs (PAbs (PApp PVar (PAbs (PApp PVar PVar))))). *)
+(* Eval compute in sofpt' (PAbs (PAbs (PApp PVar (PAbs (PApp PVar PVar))))). *)
 
 (* Reductions *)
 
+(*
 Theorem pterm_comm {A : Type} {n m : nat} : pterm (m + n) -> pterm (n + m).
 Proof. rewrite Nat.add_comm. intro h. apply h. Qed.
-
+*)
 
 

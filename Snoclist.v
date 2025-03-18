@@ -1,5 +1,9 @@
 Require Import Arith.
 
+Require Import Coq.Program.Equality.
+Require Import Coq.Logic.Eqdep_dec.
+Require Import Coq.Arith.Peano_dec.
+
 Inductive snoclist (A : Type) : nat -> Type :=
 | nil : snoclist A 0
 | snoc : forall n : nat, snoclist A n -> A -> snoclist A (S n).
@@ -37,31 +41,9 @@ match r with
 | r' :: a => snoclist_asso_1 ((app l r') :: a)
 end.
 
-(*
-with snoclist_npz {A : Type} {n : nat} (l : snoclist A n) : snoclist A (n + 0) :=
-match l with
-| [] => []
-| l' :: a => snoclist_npz l' :: a
-end
-
-with snoclist_asso_1 {A : Type} {m n : nat} (l : snoclist A (S m + n)) : snoclist A (m + S n) :=
-match l in (snoclist _ len) return (len <> 0) -> snoclist _ (m + S n) with
-| [] => fun H => match H eq_refl with end
-| l' :: a => fun _ => 
-  match l' with
-  | [] => aux l
-  | _ => (snoclist_asso_1 l') :: a
-  end
-end Nat.neq_succ_0
-
-with aux {A : Type} (l : snoclist A 1) : snoclist A (0 + 1) := l.
-*)
-
 Infix "++" := app (right associativity, at level 60) : snoclist_scope.
 
 Section Facts.
-
-Require Import Coq.Program.Equality.
 
 Lemma zero_len : forall (A : Type) (l : snoclist A 0), l = [].
 Proof.
@@ -101,12 +83,18 @@ induction l.
   reflexivity.
 Qed.
 
-(* TODO *)
 Axiom map_asso : forall {A : Type} (m n : nat) (l : snoclist A (S m + n))
   (P : forall {n : nat}, snoclist A n -> snoclist A n)
   (f : A -> A),
   (forall {n : nat} (l : snoclist A n) (a : A), P (l :: a) = P l :: f a) ->
   P (snoclist_asso_1 l) = snoclist_asso_1 (P l).
+
+Axiom sing_asso : forall {A : Type} (a : A),
+  snoclist_asso_1 ([a]) (m := 0) (n := 0) = [a].
+
+Axiom snoc_asso : forall {A : Type} (m n : nat) (l : snoclist A (S m + n)) (a : A),
+  snoclist_asso_1 (l :: a) (m := (S m)) (n := n) =
+  snoclist_asso_1 l :: a.
 
 (*
 Axiom P_npz : forall {A : Type} (n : nat) (l : snoclist A n)
@@ -117,13 +105,6 @@ Axiom P_asso : forall {A : Type} (m n : nat) (l : snoclist A (S m + n))
   (P : forall {n : nat}, snoclist A n -> snoclist A n),
   P (snoclist_asso_1 l) = snoclist_asso_1 (P l).
 *)
-
-Axiom sing_asso : forall {A : Type} (a : A),
-  snoclist_asso_1 ([a]) (m := 0) (n := 0) = [a].
-
-Axiom snoc_asso : forall {A : Type} (m n : nat) (l : snoclist A (S m + n)) (a : A),
-  snoclist_asso_1 (l :: a) (m := (S m)) (n := n) =
-  snoclist_asso_1 l :: a.
 
 (*
 Lemma map_asso : forall {A : Type} (m n : nat) (l : snoclist A (m + n)) (a : A)
@@ -163,14 +144,9 @@ dependent induction l.
   + rewrite snoc_asso.
 *)
 
-
-
 End Facts.
 
 (* Lemmas *)
-
-Require Import Coq.Logic.Eqdep_dec.
-Require Import Coq.Arith.Peano_dec.
 
 Lemma snoc_eq : forall {A : Type} {n : nat} (l1 l2 : snoclist A n) (a : A),
   l1 :: a = l2 :: a -> l1 = l2.
@@ -181,12 +157,6 @@ apply inj_pair2_eq_dec in H0.
 - apply H0.
 - apply eq_nat_dec.
 Qed.
-
-(*
-Prove some of those axioms maybe
-Redefine sat_xi (subst ty1 = subst ty2)
-x = y -> P x -> P y?
-*)
 
 (*
 Fixpoint app {A : Type} {n m : nat} (l : snoclist A n) (r : snoclist A m) : snoclist A (n + m) :=

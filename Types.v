@@ -33,3 +33,6 @@ Inductive is_typed : forall {a : nat}, context a -> pterm a -> type -> Prop :=
 | typed_app {n m} gamma delta (pt1 : pterm n) (pt2 : pterm m) ty1 ty2:
   is_typed gamma pt1 (TImp ty1 ty2) -> is_typed delta pt2 ty1 ->
   is_typed (gamma ++ delta) (PApp pt1 pt2) ty2.
+
+Definition type_eq : Type := type * type.
+Definition constraints : Type := list type_eq.

@@ -13,137 +13,6 @@ Require Import Coq.Sorting.Permutation.
 Require Import Arith.
 Require List.
 
-Inductive sat_xi : s_rules -> constraints -> Prop :=
-| sat_nil sigma : sat_xi sigma List.nil
-| sat_cons sigma ty1 ty2 const :
-  sat_xi sigma const ->
-  subst_ty sigma ty1 = subst_ty sigma ty2 ->
-  sat_xi sigma (List.cons (ty1, ty2) const).
-
-Lemma app_sat_xi : forall (sigma : s_rules) (const1 const2 : constraints),
-  sat_xi sigma const1 -> sat_xi sigma const2 -> sat_xi sigma (const1 ++ const2)%list.
-Proof.
-intros sigma const1 const2 h1 h2.
-induction const1.
-- simpl. apply h2.
-- simpl.
-  dependent destruction h1.
-  apply sat_cons.
-  apply IHconst1.
-  apply h1.
-  apply H.
-Qed.
-
-Lemma perm_sat_xi : forall (sigma : s_rules) (const1 const2 : constraints),
-  Permutation const1 const2 -> sat_xi sigma const1 -> sat_xi sigma const2.
-Proof.
-intros sigma const1 const2 hp.
-induction hp.
-- intro hs. apply hs.
-- case x. intros ty1 ty2.
-  intro hs. dependent destruction hs.
-  apply sat_cons.
-  + apply IHhp. apply hs.
-  + apply H.
-- case x. intros ty1 ty2.
-  case y. intros ty1' ty2'.
-  intro hs.
-  dependent destruction hs.
-  dependent destruction hs.
-  apply sat_cons. apply sat_cons.
-  + apply hs.
-  + apply H0.
-  + apply H.
-- intro hl.
-  apply IHhp2.
-  apply IHhp1.
-  apply hl.
-Qed.
-
-Lemma extra_sat_xi : forall (sigma : s_rules) (x : type_eq) (const : constraints),
-  sat_xi sigma (x :: const)%list -> sat_xi sigma const.
-Proof. intros. dependent destruction H. apply H. Qed.
-
-Lemma appleft_sat_xi : forall (sigma : s_rules) (const1 const2 : constraints),
-  sat_xi sigma (List.app const1 const2) -> sat_xi sigma const1.
-Proof.
-induction const2.
-- rewrite List.app_nil_r. intro h. apply h.
-- intro h. apply IHconst2.
-  assert (Permutation (const1 ++ a :: const2)%list (a :: (const1 ++ const2))%list).
-  apply (Permutation_sym (Permutation_cons_app
-    (l := (const1 ++ const2)) const1 const2 a
-    (Permutation_refl (const1 ++ const2)))).
-  assert (sat_xi sigma (a :: const1 ++ const2)%list).
-  apply perm_sat_xi with (const1 := (const1 ++ a :: const2)%list).
-  apply H. apply h.
-  apply extra_sat_xi with (x := a).
-  apply H0.
-Qed.
-
-Lemma appright_sat_xi : forall (sigma : s_rules) (const1 const2 : constraints),
-  sat_xi sigma (List.app const1 const2) -> sat_xi sigma const2.
-Proof.
-induction const1.
-- simpl. intros const2 h. apply h.
-- intros const2 h. apply IHconst1.
-  simpl in h.
-  apply extra_sat_xi with (x := a).
-  apply h.
-Qed.
-
-Theorem bidir_typed_syn :
-  forall {n : nat} (gamma : context n) (st : sterm n) (ty : type) (const : constraints) (sigma : s_rules),
-  is_bidir_syn gamma st ty const ->
-  sat_xi sigma const ->
-  is_typed (subst_ctx sigma gamma) (strip_syn st) (subst_ty sigma ty)
-
-with bidir_typed_chk :
-  forall {n : nat} (gamma : context n) (ct : cterm n) (ty : type) (const : constraints) (sigma : s_rules),
-  is_bidir_chk gamma ct ty const ->
-  sat_xi sigma const ->
-  is_typed (subst_ctx sigma gamma) (strip_chk ct) (subst_ty sigma ty).
-
-Proof.
-- intros n gamma st ty const sigma hb hs.
-  induction hb.
-  + simpl.
-    rewrite dist_subst_ty.
-    apply typed_abs.
-    rewrite <- cons_subst_ctx.
-    apply IHhb. apply hs.
-  + simpl.
-    apply bidir_typed_chk
-    with (const := const).
-    apply H. apply hs.
-- intros n gamma ct ty const sigma hb hs.
-  induction hb.
-  + simpl.
-    rewrite single_subst_ctx.
-    apply (typed_var (subst_ty sigma ty)).
-  + simpl.
-    rewrite app_subst_ctx.
-    apply typed_app
-    with (ty1 := (subst_ty sigma ty1)).
-    * rewrite <- dist_subst_ty.
-      apply IHhb.
-      apply appleft_sat_xi
-      with (const2 := const2).
-      apply hs.
-    * apply bidir_typed_syn
-      with (const := const2).
-      apply H.
-      apply appright_sat_xi
-      with (const1 := const1).
-      apply hs.
-  + simpl.
-    dependent destruction hs.
-    rewrite <- H0.
-    apply bidir_typed_syn
-    with (const := const).
-    apply H. apply hs.
-Qed.
-
 (* Unique Atomic Names *)
 
 Fixpoint uniq_circ_syn {n : nat} (t : sterm n) (a : nat) : (sterm n * nat) :=
@@ -173,19 +42,7 @@ match t with
 | LChk ct => let (res, _) := uniq_circ_chk ct 0 in LChk res
 end.
 
-(* Unification *)
-
-Inductive build_subst : s_rules -> constraints -> Prop :=
-| build_nil : build_subst List.nil List.nil
-| build_consleft sigma const a ty :
-  build_subst sigma const ->
-  build_subst (sigma ++ (a, ty) :: List.nil)%list ((TVar a, ty) :: const)%list
-| build_consright sigma const b ty :
-  build_subst sigma const ->
-  build_subst (sigma ++ (b, ty) :: List.nil)%list ((ty, TVar b) :: const)%list
-| build_consimp sigma const tyA tyB tyC tyD :
-  build_subst sigma ((tyC, tyA) :: (tyB, tyD) :: const)%list ->
-  build_subst sigma ((TImp tyA tyC, TImp tyB tyD) :: const)%list.
+(* Tautology *)
 
 Inductive is_taut : constraints -> Prop :=
 | taut_nil : is_taut List.nil
@@ -218,6 +75,375 @@ induction h.
   reflexivity.
 Qed.
 
+(* Planar Lambda Typing Properties *)
+
+Inductive not_FTV : nat -> type -> Prop :=
+| nFTV_var a b : a <> b -> not_FTV a (TVar b)
+| nFTV_imp a ty1 ty2 :
+  not_FTV a ty1 ->
+  not_FTV a ty2 ->
+  not_FTV a (TImp ty1 ty2).
+
+Inductive good_rule : s_rule -> Prop :=
+| good_id a : good_rule (a, TVar a)
+| good_nFTV a ty :
+  not_FTV a ty ->
+  good_rule (a, ty).
+
+Inductive good_rules : s_rules -> Prop :=
+| good_nil : good_rules List.nil
+| good_cons rul sigma :
+  good_rule rul ->
+  good_rules sigma ->
+  good_rules (rul :: sigma)%list.
+
+Lemma subst1_ty_nFTV : forall (a : nat) (ty ty' : type),
+  not_FTV a ty -> subst1_ty (a, ty') ty = ty.
+Proof.
+intros a ty ty' h.
+induction h.
+- simpl.
+  case_eq (b =? a).
+  + intro eq. apply Nat.eqb_eq in eq.
+    apply eq_sym in eq. apply H in eq.
+    contradiction.
+  + reflexivity.
+- simpl.
+  rewrite IHh1.
+  rewrite IHh2.
+  reflexivity.
+Qed.
+
+Lemma subst1_ty_idem : forall (rul : s_rule) (ty : type),
+  good_rule rul ->
+  subst1_ty rul (subst1_ty rul ty) = subst1_ty rul ty.
+Proof.
+intros rul ty h.
+induction h; induction ty.
+- simpl.
+  case_eq (n =? a); intro eq; simpl.
+  + case_eq (a =? a); reflexivity.
+  + rewrite eq. reflexivity.
+- simpl. rewrite IHty1. rewrite IHty2.
+  reflexivity.
+- simpl.
+  case_eq (n =? a); intro eq.
+  + apply subst1_ty_nFTV.
+    apply H.
+  + simpl. rewrite eq.
+    reflexivity.
+- simpl.
+  rewrite IHty1.
+  rewrite IHty2.
+  reflexivity.
+Qed.
+
+Lemma subst1_ty_id : forall (a : nat) (ty : type),
+  good_rule (a, ty) ->
+  ty = subst1_ty (a, ty) ty.
+Proof.
+intros a ty h.
+dependent induction h.
+- simpl. case (a =? a); reflexivity.
+- rewrite subst1_ty_nFTV. reflexivity.
+  apply H.
+Qed.
+
+Lemma subst1_const_nil : forall (rul : s_rule) (const : constraints),
+  subst1_const rul const = List.nil ->
+  const = List.nil.
+Proof.
+intros rul const h.
+induction const.
+- reflexivity.
+- assert
+  (List.length (subst1_const rul (a :: const)%list) =
+   List.length Datatypes.nil (A := type_eq)).
+  rewrite h. reflexivity.
+  destruct a.
+  simpl in H.
+  discriminate.
+Qed.
+
+Lemma subst_sat_xi : forall (sigma : s_rules) (const : constraints) (a : nat) (ty : type),
+  sat_xi sigma (subst1_const (a, ty) const) ->
+  sat_xi ((a, ty) :: sigma)%list const.
+Proof.
+intros sigma const a ty h.
+induction const.
+- apply sat_nil.
+- destruct a0. apply sat_cons.
+  + apply IHconst.
+    apply extra_sat_xi with
+    (x := (subst1_ty (a, ty) t, subst1_ty (a, ty) t0)).
+    simpl in h. apply h.
+  + simpl.
+    simpl in h.
+    dependent destruction h.
+    apply H.
+Qed.
+
+Inductive build_subst : s_rules -> constraints -> Prop :=
+| build_nil : build_subst List.nil List.nil
+| build_consleft sigma const a ty :
+  build_subst sigma (subst1_const (a, ty) const) ->
+  build_subst ((a, ty) :: sigma)%list ((TVar a, ty) :: const)%list
+| build_consright sigma const b ty :
+  build_subst sigma (subst1_const (b, ty) const) ->
+  build_subst ((b, ty) :: sigma)%list ((ty, TVar b) :: const)%list
+| build_consimp rul sigma const tyA tyB tyC tyD :
+  build_subst (rul :: sigma)%list ((tyC, tyA) :: (tyB, tyD) :: const)%list ->
+  build_subst (rul :: sigma)%list ((TImp tyA tyB, TImp tyC tyD) :: const)%list.
+
+Lemma build_sat : forall (sigma : s_rules) (const : constraints),
+  build_subst sigma const ->
+  good_rules sigma ->
+  sat_xi sigma const.
+Proof.
+intros sigma const h good.
+induction h.
+- apply sat_nil.
+- dependent destruction good.
+  apply sat_cons.
+  + apply subst_sat_xi.
+    apply IHh. apply good.
+  + dependent destruction H.
+* reflexivity.
+* simpl.
+  case_eq (a =? a); intro eq.
+  -- rewrite <- subst1_ty_id.
+     reflexivity.
+     apply good_nFTV. apply H.
+  -- rewrite Nat.eqb_refl in eq.
+     apply Bool.diff_true_false in eq.
+     contradiction.
+- dependent destruction good.
+  apply sat_cons.
+  + apply subst_sat_xi.
+    apply IHh. apply good.
+  + dependent destruction H.
+* reflexivity.
+* simpl.
+  case_eq (b =? b); intro eq.
+  -- rewrite <- subst1_ty_id.
+     reflexivity.
+     apply good_nFTV. apply H.
+  -- rewrite Nat.eqb_refl in eq.
+     apply Bool.diff_true_false in eq.
+     contradiction.
+- assert (sat_xi (rul :: sigma)%list ((tyC, tyA) :: (tyB, tyD) :: const)%list).
+  apply IHh. apply good.
+  apply sat_cons.
+  + apply extra_sat_xi with (x := (tyB, tyD)).
+    apply extra_sat_xi with (x := (tyC, tyA)).
+    apply H.
+  + dependent destruction H.
+    dependent destruction H.
+    rewrite ? dist_subst_ty.
+    rewrite H0. rewrite H1.
+    reflexivity.
+Qed.
+
+Lemma build_app : forall (const1 const2 : constraints) (sigma : s_rules) ,
+  build_subst sigma (const2 ++ const1)%list ->
+  exists sigma2 sigma1 : s_rules,
+  build_subst sigma2 const2 /\
+  build_subst sigma1 const1 /\
+  sigma = (sigma2 ++ sigma1)%list.
+Proof.
+intros const1 const2.
+induction const2; intros sigma h.
+- exists List.nil. exists sigma.
+  split. apply build_nil.
+  split. simpl in h. apply h.
+  simpl. reflexivity.
+- simpl in h.
+  dependent destruction h.
+  + assert (
+      exists sigma2 sigma1 : s_rules,
+      build_subst sigma2 (subst1_const (a0, ty) const2) /\
+      build_subst sigma1 const1 /\ sigma = (sigma2 ++ sigma1)%list
+    ). admit.
+    destruct H.
+    destruct H.
+    destruct H.
+    destruct H0.
+    exists ((a0, ty) :: x)%list.
+    exists x0.
+    split. apply build_consleft. apply H.
+    split. apply H0.
+    simpl. rewrite H1. reflexivity.
+Admitted.
+
+(*
+
+  assert (
+      exists sigma2 sigma1 : s_rules,
+      build_subst sigma2 const2 /\
+      build_subst sigma1 const1 /\ ((a0, ty) :: sigma)%list = (sigma2 ++ sigma1)%list
+    ). apply IHconst2.
+    destruct const2.
+    destruct const1.
+    simpl in h. simpl. dependent destruction.
+    
+
+  assert (
+    exists sigma2 sigma1 : s_rules,
+    build_subst sigma2 const2 /\
+    build_subst sigma1 const1 /\ sigma = (sigma2 ++ sigma1)%list
+  ).
+  apply IHconst2.
+
+
+  dependent destruction h.
+  + assert (
+      exists sigma2 sigma1 : s_rules,
+      build_subst sigma2 const2 /\
+      build_subst sigma1 const1 /\ ((a0, ty) :: sigma)%list = (sigma2 ++ sigma1)%list
+    ).
+    apply IHconst2.
+    apply build_consleft.
+
+  
+
+destruct const2; destruct const1.
+- exists List.nil. exists List.nil.
+  split. apply build_nil. split. apply build_nil.
+  simpl. simpl in h.
+  dependent destruction h.
+  reflexivity.
+- simpl in h.
+  exists List.nil. exists sigma.
+  split. apply build_nil.
+  split. apply h.
+  simpl. reflexivity.
+- simpl in h. rewrite List.app_nil_r in h.
+  exists sigma. exists List.nil.
+  split. apply h.
+  split. apply build_nil.
+  rewrite List.app_nil_r.
+  reflexivity.
+- assert (
+    exists sigma2 sigma1 : s_rules,
+    build_subst sigma2 const2 /\
+    build_subst sigma1 (t0 :: const1)%list /\ sigma = (sigma2 ++ sigma1)%list
+  ).
+  
+
+
+dependent induction h.
+- dependent destruction const2.
+  dependent destruction const1.
+  exists List.nil.
+  exists List.nil.
+  split. apply build_nil.
+  split. apply build_nil.
+  simpl. reflexivity.
+  simpl in x. discriminate.
+  simpl in x. discriminate.
+- 
+Admitted.
+*)
+
+Lemma good_app : forall (sigma1 sigma2 : s_rules),
+  good_rules sigma1 -> good_rules sigma2 -> good_rules (sigma1 ++ sigma2)%list.
+Proof.
+intros sigma1 sigma2 h1 h2.
+induction h1.
+- simpl. apply h2.
+- simpl. apply good_cons.
+  apply H. apply IHh1.
+Qed.
+
+Lemma build_bidir_good_syn :
+  forall {n : nat} (gamma : context n) (st : sterm n)
+  (ty : type) (const : constraints) (sigma : s_rules),
+  is_bidir_syn gamma st ty const ->
+  build_subst sigma const ->
+  good_rules sigma
+
+with build_bidir_good_chk :
+  forall {n : nat} (gamma : context n) (ct : cterm n)
+  (ty : type) (const : constraints) (sigma : s_rules),
+  is_bidir_chk gamma ct ty const ->
+  build_subst sigma const ->
+  good_rules sigma.
+
+Proof.
+- intros n gamma st ty const sigma hb h.
+  dependent induction hb.
+  + apply IHhb. apply h.
+  + apply build_bidir_good_chk with
+    (n := n) (gamma := gamma) (ct := ct)
+    (ty := (TVar a)) (const := const).
+    apply H. apply h.
+- intros n gamma st ty const sigma hb h.
+  dependent induction hb.
+  + dependent destruction h. apply good_nil.
+  + apply build_app in h.
+    destruct h.
+    destruct H0.
+    destruct H0.
+    destruct H1.
+    rewrite H2.
+    apply good_app.
+    apply build_bidir_good_syn with
+    (n := m) (gamma := delta) (st := st2)
+    (ty := ty1) (const := const2).
+    apply H. apply H0.
+    apply build_bidir_good_chk with
+    (n := n) (gamma := gamma) (ct := ct1)
+    (ty := TImp ty1 ty2) (const := const1).
+    apply hb. apply H1.
+  + admit.
+Admitted.
+
+(* Primitivity *)
+
+Inductive subst_dom : s_rules -> s_rules -> constraints -> Prop :=
+| dom_nil sigma : subst_dom sigma List.nil List.nil
+| dom_cons sigma1 sigma2 ty1 ty2 const :
+  subst_dom sigma1 sigma2 const ->
+  subst_ty sigma1 (subst_ty sigma2 ty1) = subst_ty sigma1 ty1 ->
+  subst_ty sigma1 (subst_ty sigma2 ty2) = subst_ty sigma1 ty2 ->
+  subst_dom sigma1 sigma2 ((ty1, ty2) :: const)%list.
+
+Definition is_primitive (sigma : s_rules) (const : constraints) : Prop :=
+  sat_xi sigma const /\
+  (forall (sigma' : s_rules),
+   sat_xi sigma' const ->
+   subst_dom sigma' sigma const).
+
+Lemma build_prim : forall (sigma : s_rules) (const : constraints),
+  build_subst sigma const ->
+  good_rules sigma ->
+  is_primitive sigma const.
+Proof.
+intros sigma const hb good.
+split.
+- apply build_sat. apply hb. apply good.
+- intros sigma' hs. dependent induction hb.
+  + intros. apply dom_nil.
+  + admit.
+  + admit.
+  + admit.
+Admitted.
+
+(* Unification *)
+
+(*
+Inductive build_subst : s_rules -> constraints -> Prop :=
+| build_nil : build_subst List.nil List.nil
+| build_consleft sigma const a ty :
+  build_subst sigma const ->
+  build_subst (sigma ++ (a, ty) :: List.nil)%list ((TVar a, ty) :: const)%list
+| build_consright sigma const b ty :
+  build_subst sigma const ->
+  build_subst (sigma ++ (b, ty) :: List.nil)%list ((ty, TVar b) :: const)%list
+| build_consimp sigma const tyA tyB tyC tyD :
+  build_subst sigma ((tyC, tyA) :: (tyB, tyD) :: const)%list ->
+  build_subst sigma ((TImp tyA tyC, TImp tyB tyD) :: const)%list.
+
 Lemma subst_ty_last : forall (sigma : s_rules) (rul : s_rule) (ty : type),
   subst_ty (sigma ++ rul :: Datatypes.nil)%list ty = 
   subst1_ty rul (subst_ty sigma ty).
@@ -242,6 +468,8 @@ induction H.
 Qed.
 
 Check ex.
+*)
+
 
 (*
 Lemma build_sat : forall (sigma : s_rules) (const : constraints),
@@ -266,23 +494,7 @@ induction h.
 
 
 
-Inductive subst_dom : s_rules -> s_rules -> constraints -> Prop :=
-| dom_nil sigma1 sigma2 : subst_dom sigma1 sigma2 List.nil
-| dom_cons sigma1 sigma2 ty1 ty2 const :
-  subst_dom sigma1 sigma2 const ->
-  subst_ty sigma1 (subst_ty sigma2 ty1) = subst_ty sigma1 ty1 ->
-  subst_ty sigma1 (subst_ty sigma2 ty2) = subst_ty sigma1 ty2 ->
-  subst_dom sigma1 sigma2 ((ty1, ty2) :: const)%list.
 
-(* ================== *)
-
-Inductive is_primitive : s_rules -> Prop :=
-| prim (sigma : s_rules) (const : constraints) :
-  sat_xi sigma const ->
-  (forall (sigma' : s_rules),
-   sat_xi sigma' const ->
-   subst_dom sigma' sigma const) ->
-  is_primitive sigma.
 
 Inductive is_inter_syn : forall {a : nat}, context a -> sterm a -> type -> Prop :=
 | inter_abs {n} ty1 gamma (st : sterm (S n)) ty2 :

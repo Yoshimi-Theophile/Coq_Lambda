@@ -41,6 +41,13 @@ match sigma with
   subst_ctx sigma' (subst1_ctx rul ctx)
 end.
 
+Fixpoint subst1_const (rul : s_rule) (const : constraints) : constraints :=
+match const with
+| List.nil => List.nil
+| ((ty1, ty2) :: const')%list =>
+  ((subst1_ty rul ty1, subst1_ty rul ty2) :: subst1_const rul const')%list
+end.
+
 (* Lemmas *)
 
 Lemma subst_asso : forall {m n : nat} (rul : s_rule) (ctx : context (S m + n)),

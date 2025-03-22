@@ -13,6 +13,20 @@ Require Import Coq.Sorting.Permutation.
 Require Import Arith.
 Require List.
 
+
+Inductive not_FTV : nat -> type -> Prop :=
+| nFTV_var a b : a <> b -> not_FTV a (TVar b)
+| nFTV_imp a ty1 ty2 :
+  not_FTV a ty1 ->
+  not_FTV a ty2 ->
+  not_FTV a (TImp ty1 ty2).
+
+(*
+Inductive not_FCV_syn : forall {n : nat}, nat -> sterm n -> Prop :=
+| nFCV_abs st : not_FCV_syn st -> not_FCV_syn (SAbs st)
+| nFCV_cir a ct : 
+*)
+
 (* Unique Atomic Names *)
 
 Fixpoint uniq_circ_syn {n : nat} (t : sterm n) (a : nat) : (sterm n * nat) :=
@@ -41,6 +55,21 @@ match t with
 | LSyn st => let (res, _) := uniq_circ_syn st 0 in LSyn res
 | LChk ct => let (res, _) := uniq_circ_chk ct 0 in LChk res
 end.
+
+(*
+Inductive is_uniq_syn : forall {n : nat}, sterm n -> Prop :=
+| uniq_abs st : is_uniq_syn st -> is_uniq_syn (SAbs st)
+| uniq_cir a ct :
+  is_uniq_chk ct ->
+  (* not_FTV a ct -> *)
+  is_uniq_syn (SCir a ct)
+
+with is_uniq_chk : forall {n : nat}, cterm n -> Prop :=
+| uniq_var : is_uniq_chk CVar
+| uniq_app ct1 st2 :
+  is_uniq_chk ct1 ->
+  is_uniq_syn st2 ->
+*)
 
 (* Tautology *)
 
@@ -76,13 +105,6 @@ induction h.
 Qed.
 
 (* Planar Lambda Typing Properties *)
-
-Inductive not_FTV : nat -> type -> Prop :=
-| nFTV_var a b : a <> b -> not_FTV a (TVar b)
-| nFTV_imp a ty1 ty2 :
-  not_FTV a ty1 ->
-  not_FTV a ty2 ->
-  not_FTV a (TImp ty1 ty2).
 
 Inductive good_rule : s_rule -> Prop :=
 | good_id a : good_rule (a, TVar a)
@@ -398,7 +420,7 @@ Proof.
   + admit.
 Admitted.
 
-(* Primitivity *)
+(* Principality *)
 
 Inductive subst_dom : s_rules -> s_rules -> constraints -> Prop :=
 | dom_nil sigma : subst_dom sigma List.nil List.nil
@@ -408,16 +430,17 @@ Inductive subst_dom : s_rules -> s_rules -> constraints -> Prop :=
   subst_ty sigma1 (subst_ty sigma2 ty2) = subst_ty sigma1 ty2 ->
   subst_dom sigma1 sigma2 ((ty1, ty2) :: const)%list.
 
-Definition is_primitive (sigma : s_rules) (const : constraints) : Prop :=
+Definition is_principal (sigma : s_rules) (const : constraints) : Prop :=
   sat_xi sigma const /\
   (forall (sigma' : s_rules),
    sat_xi sigma' const ->
-   subst_dom sigma' sigma const).
+   forall (const' : constraints),
+   subst_dom sigma' sigma const').
 
-Lemma build_prim : forall (sigma : s_rules) (const : constraints),
+Lemma build_princ : forall (sigma : s_rules) (const : constraints),
   build_subst sigma const ->
   good_rules sigma ->
-  is_primitive sigma const.
+  is_principal sigma const.
 Proof.
 intros sigma const hb good.
 split.
@@ -430,71 +453,6 @@ split.
 Admitted.
 
 (* Unification *)
-
-(*
-Inductive build_subst : s_rules -> constraints -> Prop :=
-| build_nil : build_subst List.nil List.nil
-| build_consleft sigma const a ty :
-  build_subst sigma const ->
-  build_subst (sigma ++ (a, ty) :: List.nil)%list ((TVar a, ty) :: const)%list
-| build_consright sigma const b ty :
-  build_subst sigma const ->
-  build_subst (sigma ++ (b, ty) :: List.nil)%list ((ty, TVar b) :: const)%list
-| build_consimp sigma const tyA tyB tyC tyD :
-  build_subst sigma ((tyC, tyA) :: (tyB, tyD) :: const)%list ->
-  build_subst sigma ((TImp tyA tyC, TImp tyB tyD) :: const)%list.
-
-Lemma subst_ty_last : forall (sigma : s_rules) (rul : s_rule) (ty : type),
-  subst_ty (sigma ++ rul :: Datatypes.nil)%list ty = 
-  subst1_ty rul (subst_ty sigma ty).
-Proof.
-intro sigma. induction sigma.
-- simpl. reflexivity.
-- intros rul ty. simpl.
-  apply IHsigma.
-Qed.
-
-Lemma skip_sat_xi : forall (sigma : s_rules) (rul : s_rule) (const : constraints),
-  sat_xi sigma const-> sat_xi (sigma ++ rul :: List.nil)%list const.
-Proof.
-intros.
-induction H.
-- apply sat_nil.
-- apply sat_cons.
-  apply IHsat_xi.
-  rewrite ? subst_ty_last.
-  rewrite H0.
-  reflexivity.
-Qed.
-
-Check ex.
-*)
-
-
-(*
-Lemma build_sat : forall (sigma : s_rules) (const : constraints),
-  build_subst sigma const ->
-  sat_xi sigma const.
-Proof.
-intros sigma const h.
-induction h.
-- apply sat_nil.
-- apply sat_cons.
-  + apply skip_sat_xi. apply IHh.
-  + rewrite ? subst_ty_last.
-    simpl.
-
-
-  induction const.
-  + apply sat_nil.
-  + case_eq a0.
-    intros t1 t2 eq.
-    apply sat_cons.
-*)
-
-
-
-
 
 Inductive is_inter_syn : forall {a : nat}, context a -> sterm a -> type -> Prop :=
 | inter_abs {n} ty1 gamma (st : sterm (S n)) ty2 :

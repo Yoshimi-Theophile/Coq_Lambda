@@ -36,3 +36,10 @@ Inductive is_typed : forall {a : nat}, context a -> pterm a -> type -> Prop :=
 
 Definition type_eq : Type := type * type.
 Definition constraints : Type := list type_eq.
+
+Inductive not_FTV : nat -> type -> Prop :=
+| nFTV_var a b : a <> b -> not_FTV a (TVar b)
+| nFTV_imp a ty1 ty2 :
+  not_FTV a ty1 ->
+  not_FTV a ty2 ->
+  not_FTV a (TImp ty1 ty2).

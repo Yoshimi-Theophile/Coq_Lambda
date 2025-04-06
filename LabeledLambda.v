@@ -66,3 +66,55 @@ intros n t. induction t.
 - simpl. rewrite IHt. reflexivity.
 - simpl. rewrite IHt1. rewrite IHt2. reflexivity.
 Qed.
+
+(* -- Unique -- *)
+
+
+(*
+Inductive not_FCV_syn : forall {n : nat}, nat -> sterm n -> Prop :=
+| nFCV_abs st : not_FCV_syn st -> not_FCV_syn (SAbs st)
+| nFCV_cir a ct : 
+*)
+
+(*
+Inductive is_uniq_syn : forall {n : nat}, sterm n -> Prop :=
+| uniq_abs st : is_uniq_syn st -> is_uniq_syn (SAbs st)
+| uniq_cir a ct :
+  is_uniq_chk ct ->
+  (* not_FTV a ct -> *)
+  is_uniq_syn (SCir a ct)
+
+with is_uniq_chk : forall {n : nat}, cterm n -> Prop :=
+| uniq_var : is_uniq_chk CVar
+| uniq_app ct1 st2 :
+  is_uniq_chk ct1 ->
+  is_uniq_syn st2 ->
+*)
+
+
+Fixpoint uniq_circ_syn {n : nat} (t : sterm n) (a : nat) : (sterm n * nat) :=
+match t with
+| SAbs t' => 
+  let (tnew, a') := uniq_circ_syn t' a in
+  (SAbs tnew, a')
+| SCir _ t' =>
+  let (tnew, a') := uniq_circ_chk t' (S a) in
+  (SCir a tnew, a')
+end
+with uniq_circ_chk {n : nat} (t : cterm n) (a : nat) : (cterm n * nat) :=
+match t with
+| CVar => (CVar, a)
+| CApp t1 t2 =>
+  let (tnew1, a1) := uniq_circ_chk t1 a in
+  let (tnew2, a2) := uniq_circ_syn t2 a1 in
+  (CApp tnew1 tnew2, a2)
+| CSqu t' =>
+  let (tnew, a') := uniq_circ_syn t' a in
+  (CSqu tnew, a')
+end.
+
+Definition uniq_circ {n : nat} (t : lterm n) : lterm n :=
+match t with
+| LSyn st => let (res, _) := uniq_circ_syn st 0 in LSyn res
+| LChk ct => let (res, _) := uniq_circ_chk ct 0 in LChk res
+end.

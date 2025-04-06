@@ -48,6 +48,13 @@ match const with
   ((subst1_ty rul ty1, subst1_ty rul ty2) :: subst1_const rul const')%list
 end.
 
+Fixpoint subst_const (sigma : s_rules) (const : constraints) : constraints :=
+match sigma with
+| List.nil => const
+| List.cons rul sigma' =>
+  subst_const sigma' (subst1_const rul const)
+end.
+
 (* Lemmas *)
 
 Lemma subst_asso : forall {m n : nat} (rul : s_rule) (ctx : context (S m + n)),
@@ -107,6 +114,54 @@ intros m n sigma. induction sigma.
 - simpl. intros ctx1 ctx2.
   rewrite app_subst1_ctx.
   apply IHsigma.
+Qed.
+
+Lemma subst_ctx_nil :
+  forall (sigma : s_rules),
+  subst_ctx sigma [] = [].
+Proof.
+intro sigma. induction sigma.
+- simpl. reflexivity.
+- simpl. apply IHsigma.
+Qed.
+
+Lemma subst_forall_ctx :
+  forall {n : nat} (sigma sigma' tau : s_rules) (gamma: context n),
+  (forall ty : type, subst_ty sigma' ty = subst_ty tau (subst_ty sigma ty)) ->
+  subst_ctx sigma' gamma = subst_ctx tau (subst_ctx sigma gamma).
+Proof.
+intros.
+induction gamma.
+- rewrite ? subst_ctx_nil. reflexivity.
+- rewrite ? cons_subst_ctx.
+  rewrite <- IHgamma.
+  rewrite H.
+  reflexivity.
+Qed.
+
+Lemma subst_const_nil : forall (sigma : s_rules),
+  subst_const sigma List.nil = List.nil.
+Proof.
+intro sigma. induction sigma.
+- simpl. reflexivity.
+- simpl. apply IHsigma.
+Qed.
+
+Lemma app_subst1_const : forall (rul : s_rule) (const1 const2 : constraints),
+  subst1_const rul (const1 ++ const2)%list = (subst1_const rul const1 ++ subst1_const rul const2)%list.
+Proof.
+intro rul. induction const1.
+- simpl. reflexivity.
+- dependent destruction a.
+  simpl. intro const2.
+  rewrite IHconst1.
+  reflexivity.
+Qed.
+
+Lemma step_subst_const : forall (rul : s_rule) (sigma : s_rules) (const : constraints),
+  subst_const sigma (subst1_const rul const) = subst_const (rul :: sigma)%list const.
+Proof.
+intros. simpl. reflexivity.
 Qed.
 
 (* Typing *)
